@@ -3,6 +3,7 @@
   , RecordWildCards
   , DeriveGeneric
   , DeriveDataTypeable
+  , NamedFieldPuns
   #-}
 
 module Data.URI where
@@ -63,31 +64,37 @@ instance Arbitrary URI where
 
 
 printURI :: URI -> Text
-printURI URI{..} =
+printURI uri@URI{..} =
      maybe "" (<> ":") uriScheme
   <> (if uriSlashes then "//" else "")
   <> printURIAuth uriAuthority
-  <> ( case uriPath of
-         Just xs -> "/" <> T.intercalate "/" (V.toList xs)
-         Nothing -> ""
-     )
-  <> ( if null uriQuery
-          then ""
-          else "?"
-            <> T.intercalate "&"
-                ( V.toList $
-                  (\(k :!: mV) ->
-                    let v' = case mV of
-                              Nothing -> ""
-                              Just v  -> "=" <> v
-                    in  k <> v'
-                  ) <$> uriQuery
-                )
-      )
-  <> case uriFragment of
-        Nothing -> ""
-        Just f -> "#" <> f
+  <> printURIPath uri
+  <> printURIQuery uri
+  <> printURIFragment uri
 
+printURIPath :: URI -> Text
+printURIPath URI{uriPath} = case uriPath of
+  Just xs -> "/" <> T.intercalate "/" (V.toList xs)
+  Nothing -> ""
+
+printURIQuery :: URI -> Text
+printURIQuery URI{uriQuery} = if null uriQuery
+  then ""
+  else "?"
+    <> T.intercalate "&"
+        ( V.toList $
+          (\(k :!: mV) ->
+            let v' = case mV of
+                      Nothing -> ""
+                      Just v  -> "=" <> v
+            in  k <> v'
+          ) <$> uriQuery
+        )
+
+printURIFragment :: URI -> Text
+printURIFragment URI{uriFragment} = case uriFragment of
+  Nothing -> ""
+  Just f -> "#" <> f
 
 
 parseURI :: Parser URI
